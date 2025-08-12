@@ -133,40 +133,42 @@ def atualizar_parcialmente(id):
 def atualizar_completamente(id):
     data = request.get_json()
 
-    
-    campos_obrigatorios = ['livroname', 'genero', 'sinopse', 'autor', 'ano_lancamento']
-
-    if not campos_obrigatorios not in data:
-        return jsonify({
-            "erro": f"Todos os campos são obrigatórios e devem estar preenchidos"
-        }), HTTPStatus.BAD_REQUEST
-
-    
-
-    try:
-        livro.ano_lancamento = int(data['ano_lancamento'])
-    except (ValueError, TypeError):
-        return {"erro": "ano_lancamento deve ser um número inteiro"}, HTTPStatus.BAD_REQUEST
-    
     livro = Livro.query.get(id)
     if not livro:
         return jsonify({"erro": "Livro não encontrado"}), HTTPStatus.NOT_FOUND
     
+    campos_obrigatorios = ['livroname', 'genero', 'sinopse', 'autor', 'ano_lancamento']
 
-    dados_antigos=['livroname', 'genero', 'sinopse', 'autor', 'ano_lancamento']
-    dados_novos = (
-        livro.livroname == data['livroname'] and
-        livro.genero == data['genero'] and
-        livro.sinopse == data['sinopse'] and
-        livro.autor == data['autor'] and
-        livro.ano_lancamento == data['ano_lancamento']
+    campos_faltando = [
+        campo for campo in campos_obrigatorios
+        if campo not in data or data[campo] is None or str(data[campo]).strip() == ''
+    ]
+    if campos_faltando:
+        return jsonify({
+            "erro": f"Todos os campos são obrigatórios e devem estar preenchidos: {', '.join(campos_faltando)}"
+        }), HTTPStatus.BAD_REQUEST
+
+
+    try:
+        novo_ano = int(data['ano_lancamento'])
+    except (ValueError, TypeError):
+        return {"erro": "ano_lancamento deve ser um número inteiro"}, HTTPStatus.BAD_REQUEST
+    
+    
+
+    # Verifica se todos os campos são iguais ao que já está salvo no banco
+    todos_diferentes = (
+        livro.livroname != data['livroname']and
+        livro.genero != data['genero']and
+        livro.sinopse !=  data['sinopse']and
+        livro.autor != data['autor']and
+        livro.ano_lancamento != novo_ano
     )
 
-    if dados_novos == dados_antigos:
+    if not todos_diferentes:
         return jsonify({
-            "erro": "Os novos dados são iguais aos dados antigos. É necessário modificar todos os campos."
+            "erro": "Todos os campos devem ser atualizados com valores diferentes dos atuais."
         }), HTTPStatus.BAD_REQUEST
-    
 
     if 'livroname' in data:
         livro.livroname = data['livroname']
@@ -181,11 +183,9 @@ def atualizar_completamente(id):
         livro.autor = data['autor']
 
     if 'ano_lancamento' in data:
-        livro.ano_lancamento = data['ano_lancamento']
+        livro.ano_lancamento = novo_ano
 
     
-
-
     db.session.commit()
 
     return jsonify({
@@ -197,3 +197,4 @@ def atualizar_completamente(id):
         "ano_lancamento": livro.ano_lancamento,
         "mensagem": f"Livro {id} atualizado com sucesso."
     }), HTTPStatus.OK
+
