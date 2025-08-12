@@ -6,7 +6,7 @@ from flask_sqlalchemy import SQLAlchemy
 from models import db
 from datetime import datetime
 from sqlalchemy import func
-from controllers import livro
+from controllers import views
 
 @click.command("init-db")
 def init_db_command():
@@ -42,5 +42,6 @@ def create_app(test_config=None):
 
     
     app.register_blueprint(livro.app)
+
 
     return app
